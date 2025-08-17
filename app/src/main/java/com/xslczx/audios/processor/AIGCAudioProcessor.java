@@ -1,4 +1,4 @@
-package com.xslczx.audios;
+package com.xslczx.audios.processor;
 
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
@@ -8,8 +8,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.xslczx.audios.encoder.AudioDecodeInfo;
+import com.xslczx.audios.datas.AudioDecodeInfo;
+import com.xslczx.audios.datas.AudioException;
+import com.xslczx.audios.datas.Config;
 import com.xslczx.audios.encoder.Encoder;
+import com.xslczx.audios.encoder.EncoderFactory;
 import com.xslczx.audios.encoder.FlacEncoder;
 import com.xslczx.audios.encoder.MediaCodecEncoder;
 import com.xslczx.audios.morse.MorseAudio;
@@ -22,7 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class AudioProcessor {
+public class AIGCAudioProcessor {
 
     private final Config config;
     private final AtomicBoolean isStopped = new AtomicBoolean(false);
@@ -32,16 +35,15 @@ public class AudioProcessor {
     private static final long MIN_PROGRESS_INTERVAL_MS = 100;
     private float lastProgress = 0f;
     private long lastProgressTime = 0;
-    private final Callback callback;
+    private final OnProcessListener onProcessListener;
 
-    public AudioProcessor(@NotNull Config config, @Nullable Callback callback) {
+    public AIGCAudioProcessor(@NotNull Config config, @Nullable OnProcessListener onProcessListener) {
         this.config = config;
-        this.callback = callback;
+        this.onProcessListener = onProcessListener;
         try {
             encoder = EncoderFactory.createEncoder(config);
         } catch (Exception e) {
             AudioException audioException = new AudioException("初始化失败,无法创建编码器", e);
-            callbackOnInfo(Log.ERROR, audioException.getMessageWithCause());
             callbackOnError(audioException);
             stop();
         }
@@ -50,14 +52,18 @@ public class AudioProcessor {
     /**
      * 异步解码 + PCM 处理
      */
-    public void startAsync() {
-        if (isStopped.get()) return;
+    @NotNull
+    public AIGCAudioProcessor startAsync() {
+        if (isStopped.get()) return this;
         new Thread(this::decodeInternal, "AudioDecoderThread").start();
+        return this;
     }
 
-    public void generateAIAsync() {
-        if (isStopped.get()) return;
+    @NotNull
+    public AIGCAudioProcessor generateAIAsync() {
+        if (isStopped.get()) return this;
         new Thread(this::generateAI, "AIGeneratorThread").start();
+        return this;
     }
 
     /**
@@ -106,7 +112,6 @@ public class AudioProcessor {
                     PCM_ENCODING_BIT_DEPTH,
                     durationUs
             );
-            callbackOnInfo(Log.DEBUG, "音频信息==>" + decodeInfo);
             callbackOnStart(decodeInfo);
 
             int bitRate = config.bitRate > 0 ? config.bitRate : 128_000;
@@ -233,10 +238,8 @@ public class AudioProcessor {
             callbackOnComplete();
 
         } catch (AudioException e) {
-            callbackOnInfo(Log.ERROR, e.getMessageWithCause());
             callbackOnError(e);
         } catch (Exception e) {
-            callbackOnInfo(Log.ERROR, "音频处理失败:" + e.getClass().getName() + ":" + e.getMessage());
             callbackOnError(new AudioException("音频处理失败", e));
         } finally {
             try {
@@ -292,14 +295,14 @@ public class AudioProcessor {
     private void callbackOnStart(AudioDecodeInfo info) {
         handler.post(() -> {
             if (isStopped.get()) return;
-            if (callback != null) callback.onStart(info);
+            if (onProcessListener != null) onProcessListener.onStart(info);
         });
     }
 
     private void callbackOnInfo(int level, String extra) {
         if (isStopped.get()) return;
-        if (callback != null) {
-            callback.onInfo(level, extra);
+        if (onProcessListener != null) {
+            onProcessListener.onInfo(level, extra);
         }
     }
 
@@ -308,38 +311,32 @@ public class AudioProcessor {
         callbackOnInfo(Log.VERBOSE, "进度==>" + v);
         handler.post(() -> {
             if (isStopped.get()) return;
-            if (callback != null) callback.onProgress(v);
+            if (onProcessListener != null) onProcessListener.onProgress(v);
         });
     }
 
     private void callbackOnComplete() {
         handler.post(() -> {
             if (isStopped.get()) return;
-            if (callback != null) callback.onComplete();
+            if (onProcessListener != null) onProcessListener.onComplete(config.outputPath);
         });
     }
 
     private void callbackOnError(AudioException e) {
         handler.post(() -> {
             if (isStopped.get()) return;
-            if (callback != null) callback.onError(e);
+            if (onProcessListener != null) onProcessListener.onError(e);
         });
     }
 
-    /**
-     * 回调
-     */
-    public interface Callback {
-        default void onStart(@NotNull AudioDecodeInfo info) {
-        }
+    public interface OnProcessListener {
+        void onStart(@NotNull AudioDecodeInfo info);
 
-        default void onInfo(int level, @NotNull String extra) {
-        }
+        void onInfo(int level, @NotNull String extra);
 
-        default void onProgress(float progress) {
-        }
+        void onProgress(float progress);
 
-        void onComplete();
+        void onComplete(@NotNull String outputPath);
 
         void onError(@NotNull AudioException e);
     }

@@ -7,7 +7,11 @@ import com.kongzue.dialogx.DialogX
 import com.kongzue.dialogx.dialogs.TipDialog
 import com.kongzue.dialogx.dialogs.WaitDialog
 import com.xslczx.audios.databinding.ActivityMainBinding
-import com.xslczx.audios.pcm.AITailPcmAppender
+import com.xslczx.audios.datas.AudioException
+import com.xslczx.audios.datas.Config
+import com.xslczx.audios.processor.AIGCAudioProcessor
+import com.xslczx.audios.processor.AITailPcmAppender
+import com.xslczx.audios.processor.OnProcessAdapter
 import com.xslczx.audios.tag.Tagger
 import org.json.JSONObject
 import java.io.File
@@ -30,33 +34,31 @@ class MainActivity : ComponentActivity() {
                 outputFile.absolutePath,
                 null
             )
-            val audioProcessor = AudioProcessor(config, object : AudioProcessor.Callback {
+            val AIGCAudioProcessor =
+                AIGCAudioProcessor(config, object : OnProcessAdapter() {
 
-                override fun onInfo(level: Int, extra: String) {
-                    super.onInfo(level, extra)
-                    Log.println(level, "AudioProcessor", extra)
-                }
+                    override fun onProgress(progress: Float) {
+                        super.onProgress(progress)
+                        waitDialog.setMessageContent("Generating... ${(progress * 100).toInt()}%")
+                    }
 
-                override fun onProgress(progress: Float) {
-                    super.onProgress(progress)
-                    waitDialog.setMessageContent("Generating... ${(progress * 100).toInt()}%")
-                }
+                    override fun onComplete(outputPath: String) {
+                        super.onComplete(outputPath)
+                        waitDialog.doDismiss()
+                        TipDialog.show("成功", WaitDialog.TYPE.SUCCESS)
+                    }
 
-                override fun onComplete() {
-                    waitDialog.doDismiss()
-                    TipDialog.show("成功", WaitDialog.TYPE.SUCCESS)
-                }
-
-                override fun onError(e: AudioException) {
-                    waitDialog.doDismiss()
-                    TipDialog.show(e.messageWithCause, WaitDialog.TYPE.ERROR)
-                }
-            })
+                    override fun onError(e: AudioException) {
+                        super.onError(e)
+                        waitDialog.doDismiss()
+                        TipDialog.show(e.messageWithCause, WaitDialog.TYPE.ERROR)
+                    }
+                })
             waitDialog.setOnBackPressedListener {
-                audioProcessor.stop()
+                AIGCAudioProcessor.stop()
                 true
             }
-            audioProcessor.generateAIAsync()
+            AIGCAudioProcessor.generateAIAsync()
         }
         binding.btnGenerateMusic.setOnClickListener {
             val waitDialog = WaitDialog.show("Generating...")
@@ -71,33 +73,31 @@ class MainActivity : ComponentActivity() {
                 outputFile.absolutePath,
                 pcmEffectProcessor
             )
-            val audioProcessor = AudioProcessor(config, object : AudioProcessor.Callback {
+            val AIGCAudioProcessor =
+                AIGCAudioProcessor(config, object : OnProcessAdapter() {
 
-                override fun onInfo(level: Int, extra: String) {
-                    super.onInfo(level, extra)
-                    Log.println(level, ">>>:AudioProcessor", extra)
-                }
+                    override fun onProgress(progress: Float) {
+                        super.onProgress(progress)
+                        waitDialog.setMessageContent("Generating... ${(progress * 100).toInt()}%")
+                    }
 
-                override fun onProgress(progress: Float) {
-                    super.onProgress(progress)
-                    waitDialog.setMessageContent("Generating... ${(progress * 100).toInt()}%")
-                }
+                    override fun onComplete(outputPath: String) {
+                        super.onComplete(outputPath)
+                        waitDialog.doDismiss()
+                        TipDialog.show("成功", WaitDialog.TYPE.SUCCESS)
+                    }
 
-                override fun onComplete() {
-                    waitDialog.doDismiss()
-                    TipDialog.show("成功", WaitDialog.TYPE.SUCCESS)
-                }
-
-                override fun onError(e: AudioException) {
-                    waitDialog.doDismiss()
-                    TipDialog.show(e.messageWithCause, WaitDialog.TYPE.ERROR)
-                }
-            })
+                    override fun onError(e: AudioException) {
+                        super.onError(e)
+                        waitDialog.doDismiss()
+                        TipDialog.show(e.messageWithCause, WaitDialog.TYPE.ERROR)
+                    }
+                })
             waitDialog.setOnBackPressedListener {
-                audioProcessor.stop()
+                AIGCAudioProcessor.stop()
                 true
             }
-            audioProcessor.startAsync()
+            AIGCAudioProcessor.startAsync()
         }
         binding.btnUpdateTag.setOnClickListener {
             val outputFile = getOutputFile("output_music_002")
@@ -122,13 +122,14 @@ class MainActivity : ComponentActivity() {
         val outExtension = when (binding.rgOutputType.checkedRadioButtonId) {
             R.id.rb_output_wav -> "wav"
             R.id.rb_output_mp3 -> "mp3"
-            R.id.rb_output_aac -> "aac"
-            R.id.rb_output_amr -> "amr"
-            R.id.rb_output_three_gp -> "3gp"
             R.id.rb_output_m4a -> "m4a"
             R.id.rb_output_flac -> "flac"
+            /*R.id.rb_output_aac -> "aac"
+            R.id.rb_output_amr -> "amr"
+            R.id.rb_output_three_gp -> "3gp"
             R.id.rb_output_ogg -> "ogg"
-            else -> "pcm"
+            R.id.rb_output_pcm -> "pcm"*/
+            else -> "wav"
         }
         val outputFile = File(filesDir, "$name.$outExtension")
         return outputFile

@@ -1,4 +1,4 @@
-package com.xslczx.audios.pcm;
+package com.xslczx.audios.processor;
 
 import com.xslczx.audios.morse.MorseAudio;
 

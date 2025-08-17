@@ -41,32 +41,36 @@
             android:id="@+id/rb_output_ogg"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="ogg" />
+            android:text="ogg"
+            android:visibility="gone" />
 
         <RadioButton
             android:id="@+id/rb_output_aac"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="aac" />
+            android:text="aac"
+            android:visibility="gone" />
 
         <RadioButton
             android:id="@+id/rb_output_amr"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="amr" />
+            android:text="amr"
+            android:visibility="gone" />
 
         <RadioButton
             android:id="@+id/rb_output_three_gp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="3gp" />
+            android:text="3gp"
+            android:visibility="gone" />
 
         <RadioButton
             android:id="@+id/rb_output_pcm"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="pcm" />
-
+            android:text="pcm"
+            android:visibility="gone" />
 
     </RadioGroup>
 
@@ -74,22 +78,18 @@
         android:id="@+id/btn_generate_morse"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="生成莫斯码音频" />
+        android:text="生成摩斯电码音频" />
 
     <Button
         android:id="@+id/btn_generate_music"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="处理音乐" />
-
-    <TextView
-        android:text="TAG目前支持 wav,mp3,m4a,flac"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:text="生成AIGC音乐" />
 
     <Button
         android:id="@+id/btn_update_tag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="处理tag" />
+        android:text="添加AIGC"
+        android:visibility="gone" />
 </LinearLayout>

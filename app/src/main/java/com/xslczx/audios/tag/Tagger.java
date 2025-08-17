@@ -2,7 +2,7 @@ package com.xslczx.audios.tag;
 
 import android.util.Log;
 
-import com.xslczx.audios.AudioException;
+import com.xslczx.audios.datas.AudioException;
 
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;

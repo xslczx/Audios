@@ -22,7 +22,6 @@ public class FlacEncoder implements Encoder {
     private final int[] sampleRates = new int[]{
             8000, 12000, 16000, 24000, 48000
     };
-    private int sampleRate;
     private int channelCount;
     private long totalPcmBytes;
     private long writtenPcmBytes;
@@ -41,14 +40,14 @@ public class FlacEncoder implements Encoder {
     public void prepare(int sampleRate, int channelCount, int bitDepth, int bitRate) throws Exception {
         if (isPrepared) return;
 
-        this.sampleRate = nearestValue(sampleRates, sampleRate);
+        int sampleRateReal = nearestValue(sampleRates, sampleRate);
         this.channelCount = channelCount;
         this.writtenPcmBytes = 0;
 
         fos = new FileOutputStream(path);
         bufferInfo = new MediaCodec.BufferInfo();
 
-        MediaFormat format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_FLAC, this.sampleRate, channelCount);
+        MediaFormat format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_FLAC, sampleRateReal, channelCount);
         format.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);
 
         codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_FLAC);

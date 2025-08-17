@@ -1,4 +1,4 @@
-package com.xslczx.audios.encoder;
+package com.xslczx.audios.datas;
 
 import org.jetbrains.annotations.NotNull;
 

@@ -1,9 +1,6 @@
 package com.xslczx.audios.morse;
 
-import android.util.Log;
-
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
 import java.util.List;
 
 public class MorseAudio {
@@ -11,15 +8,15 @@ public class MorseAudio {
     /**
      * 点
      */
-    private int dotRatio = 1;
+    private static final int dotRatio = 1;
     /**
      * 划
      */
-    private int rowRatio = 3;
+    private static final int rowRatio = 3;
     /**
      * 大间隔
      */
-    private int blankRatio = 7;
+    private static final int blankRatio = 7;
 
     /**
      * 单词 -> PCM 音频
@@ -81,8 +78,6 @@ public class MorseAudio {
      * @return PCM 音频字节数组 (16bit PCM, little endian)
      */
     public byte[] codeConvert2Sound(String codeString, int frequency, int unitMs, int sampleRate, double volume) {
-        Log.d(">>>:MorseAudio", "codeString: " + codeString + " unitMs: " + unitMs + " sampleRate: " + sampleRate);
-
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         int dot = unitMs * dotRatio;   // 1 单位

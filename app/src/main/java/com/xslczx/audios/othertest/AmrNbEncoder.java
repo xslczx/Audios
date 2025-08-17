@@ -1,10 +1,12 @@
-package com.xslczx.audios.encoder;
+package com.xslczx.audios.othertest;
 
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Build;
 
 import androidx.annotation.RequiresApi;
+
+import com.xslczx.audios.encoder.MediaCodecEncoder;
 
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class AmrNbEncoder extends MediaCodecEncoder {

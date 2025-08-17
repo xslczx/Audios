@@ -1,4 +1,4 @@
-package com.xslczx.audios;
+package com.xslczx.audios.datas;
 
 public class AudioException extends RuntimeException {
 

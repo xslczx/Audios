@@ -1,6 +1,6 @@
-package com.xslczx.audios;
+package com.xslczx.audios.datas;
 
-import com.xslczx.audios.pcm.PcmEffectProcessor;
+import com.xslczx.audios.processor.PcmEffectProcessor;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

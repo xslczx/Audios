@@ -1,10 +1,12 @@
-package com.xslczx.audios.encoder;
+package com.xslczx.audios.othertest;
 
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Build;
 
 import androidx.annotation.RequiresApi;
+
+import com.xslczx.audios.encoder.MediaCodecEncoder;
 
 @RequiresApi(Build.VERSION_CODES.R)
 public class OggOpusEncoder extends MediaCodecEncoder {
