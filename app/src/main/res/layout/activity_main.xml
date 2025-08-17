@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+
+    <RadioGroup
+        android:id="@+id/rg_output_type"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp">
+
+        <RadioButton
+            android:id="@+id/rb_output_wav"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="wav" />
+
+        <RadioButton
+            android:id="@+id/rb_output_mp3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="mp3" />
+
+
+        <RadioButton
+            android:id="@+id/rb_output_m4a"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="m4a" />
+
+        <RadioButton
+            android:id="@+id/rb_output_flac"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="flac" />
+
+        <RadioButton
+            android:id="@+id/rb_output_ogg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ogg" />
+
+        <RadioButton
+            android:id="@+id/rb_output_aac"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="aac" />
+
+        <RadioButton
+            android:id="@+id/rb_output_amr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="amr" />
+
+        <RadioButton
+            android:id="@+id/rb_output_three_gp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="3gp" />
+
+        <RadioButton
+            android:id="@+id/rb_output_pcm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="pcm" />
+
+
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btn_generate_morse"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="生成莫斯码音频" />
+
+    <Button
+        android:id="@+id/btn_generate_music"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="处理音乐" />
+
+    <TextView
+        android:text="TAG目前支持 wav,mp3,m4a,flac"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btn_update_tag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="处理tag" />
+</LinearLayout>
