@@ -1,5 +1,6 @@
 package com.xslczx.audios.processor;
 
+import com.xslczx.audios.datas.Config;
 import com.xslczx.audios.morse.MorseAudio;
 
 import java.io.ByteArrayOutputStream;
@@ -12,13 +13,13 @@ public class AITailPcmAppender implements PcmEffectProcessor {
 
     private int sampleRate;
     private final int wpm;
+    private final double volume;
+    private final int frequency;
 
-    public AITailPcmAppender(int wpm) {
-        this.wpm = wpm;
-    }
-
-    public AITailPcmAppender() {
-        this(13);
+    public AITailPcmAppender(Config config) {
+        this.wpm = config.wpm;
+        this.volume = config.volume;
+        this.frequency = config.frequency;
     }
 
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -29,14 +30,14 @@ public class AITailPcmAppender implements PcmEffectProcessor {
     }
 
     @Override
-    public void write(byte[] pcmData) throws IOException{
+    public void write(byte[] pcmData) throws IOException {
         buffer.write(pcmData);
     }
 
     @Override
     public byte[] flush() {
         byte[] main = buffer.toByteArray();
-        byte[] extraPcm = new MorseAudio().morseWord2Sound("AI", 500, wpm, sampleRate, 0.1);
+        byte[] extraPcm = new MorseAudio().morseWord2Sound("AI", frequency, wpm, sampleRate, volume);
 
         if (extraPcm == null || extraPcm.length == 0) return main;
 

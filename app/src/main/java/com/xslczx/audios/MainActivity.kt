@@ -10,7 +10,6 @@ import com.xslczx.audios.databinding.ActivityMainBinding
 import com.xslczx.audios.datas.AudioException
 import com.xslczx.audios.datas.Config
 import com.xslczx.audios.processor.AIGCAudioProcessor
-import com.xslczx.audios.processor.AITailPcmAppender
 import com.xslczx.audios.processor.OnProcessAdapter
 import com.xslczx.audios.tag.Tagger
 import org.json.JSONObject
@@ -32,8 +31,11 @@ class MainActivity : ComponentActivity() {
             val config = Config(
                 null,
                 outputFile.absolutePath,
-                null
-            )
+                null,
+                mutableMapOf<String, String>().apply {
+                    put("AIGC", aigc.toString())
+                }
+            ).setVolume(0.5)
             val AIGCAudioProcessor =
                 AIGCAudioProcessor(config, object : OnProcessAdapter() {
 
@@ -67,11 +69,12 @@ class MainActivity : ComponentActivity() {
             val inputStream = assets.open(assetsPath)
             inputStream.copyTo(inputFile.outputStream())
             val outputFile = getOutputFile("output_music_002")
-            val pcmEffectProcessor = AITailPcmAppender()
             val config = Config(
                 inputFile.absolutePath,
                 outputFile.absolutePath,
-                pcmEffectProcessor
+                mutableMapOf<String, String>().apply {
+                    put("AIGC", aigc.toString())
+                }
             )
             val AIGCAudioProcessor =
                 AIGCAudioProcessor(config, object : OnProcessAdapter() {
@@ -106,10 +109,9 @@ class MainActivity : ComponentActivity() {
                 return@setOnClickListener
             }
             try {
-                val json = JSONObject()
-                json.putOpt("Label", "xxxxx")
-                json.putOpt("Product", "aaaa")
-                Tagger.tag(outputFile.absolutePath, "AIGC", json.toString())
+                Tagger.updateCustomInfo(outputFile.absolutePath, hashMapOf<String, String>().apply {
+                    put("AIGC", aigc.toString())
+                })
                 TipDialog.show("成功", WaitDialog.TYPE.SUCCESS)
             } catch (e: Exception) {
                 TipDialog.show("不支持的文件格式", WaitDialog.TYPE.ERROR)
@@ -118,17 +120,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val aigc = JSONObject().apply {
+        putOpt("Label", "xxxxx")
+        putOpt("Product", "aaaa")
+    }
+
     private fun getOutputFile(name: String): File {
         val outExtension = when (binding.rgOutputType.checkedRadioButtonId) {
             R.id.rb_output_wav -> "wav"
             R.id.rb_output_mp3 -> "mp3"
             R.id.rb_output_m4a -> "m4a"
             R.id.rb_output_flac -> "flac"
-            /*R.id.rb_output_aac -> "aac"
-            R.id.rb_output_amr -> "amr"
-            R.id.rb_output_three_gp -> "3gp"
-            R.id.rb_output_ogg -> "ogg"
-            R.id.rb_output_pcm -> "pcm"*/
             else -> "wav"
         }
         val outputFile = File(filesDir, "$name.$outExtension")

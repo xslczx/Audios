@@ -74,6 +74,7 @@ public class MorseAudio {
      * 将摩尔斯电码转成 PCM 音频
      *
      * @param codeString 摩尔斯电码
+     * @param frequency  频率
      * @param unitMs     单位时间 (ms)
      * @return PCM 音频字节数组 (16bit PCM, little endian)
      */

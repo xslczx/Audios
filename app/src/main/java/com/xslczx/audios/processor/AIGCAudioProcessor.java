@@ -16,6 +16,7 @@ import com.xslczx.audios.encoder.EncoderFactory;
 import com.xslczx.audios.encoder.FlacEncoder;
 import com.xslczx.audios.encoder.MediaCodecEncoder;
 import com.xslczx.audios.morse.MorseAudio;
+import com.xslczx.audios.tag.Tagger;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -234,9 +235,10 @@ public class AIGCAudioProcessor {
                 }
             }
 
+            callbackOnInfo(Log.DEBUG, "更新音频信息==>" + config.extraInfo);
+            Tagger.updateCustomInfo(config.outputPath, config.extraInfo);
             callbackOnInfo(Log.DEBUG, "音频处理完成==>" + config.outputPath);
             callbackOnComplete();
-
         } catch (AudioException e) {
             callbackOnError(e);
         } catch (Exception e) {
