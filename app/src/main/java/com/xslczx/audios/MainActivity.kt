@@ -10,6 +10,7 @@ import com.xslczx.audios.databinding.ActivityMainBinding
 import com.xslczx.audios.datas.AudioException
 import com.xslczx.audios.datas.Config
 import com.xslczx.audios.processor.AIGCAudioProcessor
+import com.xslczx.audios.processor.AITailPcmAppender
 import com.xslczx.audios.processor.OnProcessAdapter
 import com.xslczx.audios.tag.Tagger
 import org.json.JSONObject
@@ -31,7 +32,6 @@ class MainActivity : ComponentActivity() {
             val config = Config(
                 null,
                 outputFile.absolutePath,
-                null,
                 mutableMapOf<String, String>().apply {
                     put("AIGC", aigc.toString())
                 }

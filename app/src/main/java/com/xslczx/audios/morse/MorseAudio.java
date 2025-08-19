@@ -18,22 +18,16 @@ public class MorseAudio {
      */
     private static final int blankRatio = 7;
 
-    /**
-     * 单词 -> PCM 音频
-     */
-    public byte[] morseWord2Sound(String word, int frequency, int wpm, int sampleRate, double volume) {
+    public byte[] morseWord2Sound(String word, int frequency, int wpm, int sampleRate, double volume, int channelCount) {
         String morse = encodeWord(word);
         int unitDurationMs = 1200 / wpm;
-        return codeConvert2Sound(morse, frequency, unitDurationMs, sampleRate, volume);
+        return codeConvert2Sound(morse, frequency, unitDurationMs, sampleRate, volume, channelCount);
     }
 
-    /**
-     * 词组 -> PCM 音频
-     */
-    public byte[] morsePhrase2Sound(List<String> words, int frequency, int wpm, int sampleRate, double volume) {
+    public byte[] morsePhrase2Sound(List<String> words, int frequency, int wpm, int sampleRate, double volume, int channelCount) {
         String morse = encodePhrase(words);
         int unitDurationMs = 1200 / wpm;
-        return codeConvert2Sound(morse, frequency, unitDurationMs, sampleRate, volume);
+        return codeConvert2Sound(morse, frequency, unitDurationMs, sampleRate, volume, channelCount);
     }
 
 
@@ -78,12 +72,12 @@ public class MorseAudio {
      * @param unitMs     单位时间 (ms)
      * @return PCM 音频字节数组 (16bit PCM, little endian)
      */
-    public byte[] codeConvert2Sound(String codeString, int frequency, int unitMs, int sampleRate, double volume) {
+    public byte[] codeConvert2Sound(String codeString, int frequency, int unitMs, int sampleRate, double volume, int channelCount) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        int dot = unitMs * dotRatio;   // 1 单位
-        int dash = unitMs * rowRatio;  // 3 单位
-        int letterSpace = unitMs * 3;  // 字母间隔
+        int dot = unitMs * dotRatio;       // 1 单位
+        int dash = unitMs * rowRatio;      // 3 单位
+        int letterSpace = unitMs * 3;      // 字母间隔
         int wordSpace = unitMs * blankRatio; // 单词间隔
 
         for (int i = 0; i < codeString.length(); i++) {
@@ -110,7 +104,6 @@ public class MorseAudio {
                     continue;
             }
 
-            // 生成音/静音
             int sampleCount = (int) ((durationMs / 1000.0) * sampleRate);
             for (int k = 0; k < sampleCount; k++) {
                 short sample;
@@ -120,20 +113,28 @@ public class MorseAudio {
                 } else {
                     sample = 0;
                 }
-                out.write(sample & 0xff);
-                out.write((sample >> 8) & 0xff);
+
+                // 根据 channelCount 写入交错声道
+                for (int ch = 0; ch < channelCount; ch++) {
+                    out.write(sample & 0xff);
+                    out.write((sample >> 8) & 0xff);
+                }
             }
 
             // 点和划后面补一个 **1 单位静音**
             if (isTone) {
                 int gapSamples = (int) ((unitMs / 1000.0) * sampleRate);
                 for (int k = 0; k < gapSamples; k++) {
-                    out.write(0);
-                    out.write(0);
+                    for (int ch = 0; ch < channelCount; ch++) {
+                        out.write(0);
+                        out.write(0);
+                    }
                 }
             }
         }
+
         return out.toByteArray();
     }
+
 }
 

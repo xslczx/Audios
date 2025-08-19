@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.xslczx.audios"
     compileSdk = 36
+    ndkVersion = "21.4.7075529"
 
     defaultConfig {
         applicationId = "com.xslczx.audios"
@@ -15,6 +16,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            }
+        }
     }
 
     buildTypes {
@@ -24,6 +31,19 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDir("src/main/jniLibs")
         }
     }
     compileOptions {
@@ -47,9 +67,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation("com.kongzue.dialogx:DialogX:0.0.49")
-
-    implementation("com.github.axet:lame:1.0.9")
-
-    compileOnly("com.github.axet:lame:1.0.9")
     implementation("net.jthink:jaudiotagger:3.0.1")
 }

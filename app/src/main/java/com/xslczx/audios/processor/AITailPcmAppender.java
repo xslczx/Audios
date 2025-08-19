@@ -15,6 +15,7 @@ public class AITailPcmAppender implements PcmEffectProcessor {
     private final int wpm;
     private final double volume;
     private final int frequency;
+    private int channelCount;
 
     public AITailPcmAppender(Config config) {
         this.wpm = config.wpm;
@@ -27,6 +28,7 @@ public class AITailPcmAppender implements PcmEffectProcessor {
     @Override
     public void prepare(int sampleRate, int channelCount, int bitDepth, int bitrate) {
         this.sampleRate = sampleRate;
+        this.channelCount = channelCount;
     }
 
     @Override
@@ -37,7 +39,7 @@ public class AITailPcmAppender implements PcmEffectProcessor {
     @Override
     public byte[] flush() {
         byte[] main = buffer.toByteArray();
-        byte[] extraPcm = new MorseAudio().morseWord2Sound("AI", frequency, wpm, sampleRate, volume);
+        byte[] extraPcm = new MorseAudio().morseWord2Sound("AI", frequency, wpm, sampleRate, volume, channelCount);
 
         if (extraPcm == null || extraPcm.length == 0) return main;
 

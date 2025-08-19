@@ -270,9 +270,9 @@ public class AIGCAudioProcessor {
 
     private void generateAI() {
         MorseAudio morseAudio = new MorseAudio();
-        byte[] sound = morseAudio.morseWord2Sound("AI", 800, 13, 16000, 1.0);
+        byte[] sound = morseAudio.morseWord2Sound("AI", 800, 13, 16000, 1.0,2);
         try {
-            encoder.prepare(16000, 1, 16, 32_000);
+            encoder.prepare(16000, 2, 16, 32_000);
             encoder.write(sound);
             encoder.flush();
             callbackOnComplete();

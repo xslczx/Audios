@@ -40,17 +40,6 @@ public class Config {
     public double volume = 0.1;
     public int frequency = FREQUENCY_STANDARD;
 
-    public Config(
-            @Nullable String inputPath,
-            @NotNull String outputPath,
-            @Nullable PcmEffectProcessor effectProcessor,
-            @NotNull Map<String, String> extraInfo) {
-        this.inputPath = inputPath;
-        this.outputPath = outputPath;
-        this.effectProcessor = effectProcessor;
-        this.extraInfo = extraInfo;
-    }
-
     public Config(@Nullable String inputPath,
                   @NotNull String outputPath,
                   @NotNull Map<String, String> extraInfo) {

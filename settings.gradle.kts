@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://packagecloud.io/hernandazevedo/androidmp3recorder/maven2")
+        maven("https://jitpack.io")
     }
 }
 
