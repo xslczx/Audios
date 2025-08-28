@@ -3,7 +3,6 @@ package com.xslczx.audios.processor;
 import com.xslczx.audios.datas.Config;
 import com.xslczx.audios.morse.MorseAudio;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 /**
@@ -16,14 +15,13 @@ public class AITailPcmAppender implements PcmEffectProcessor {
     private final double volume;
     private final int frequency;
     private int channelCount;
+    private byte[] main;
 
     public AITailPcmAppender(Config config) {
         this.wpm = config.wpm;
         this.volume = config.volume;
         this.frequency = config.frequency;
     }
-
-    private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
     @Override
     public void prepare(int sampleRate, int channelCount, int bitDepth, int bitrate) {
@@ -33,19 +31,20 @@ public class AITailPcmAppender implements PcmEffectProcessor {
 
     @Override
     public void write(byte[] pcmData) throws IOException {
-        buffer.write(pcmData);
+        main = pcmData;
     }
 
     @Override
     public byte[] flush() {
-        byte[] main = buffer.toByteArray();
         byte[] extraPcm = new MorseAudio().morseWord2Sound("AI", frequency, wpm, sampleRate, volume, channelCount);
 
-        if (extraPcm == null || extraPcm.length == 0) return main;
+        int mainLength = main.length;
+        int extraLength = extraPcm.length;
 
-        byte[] result = new byte[main.length + extraPcm.length];
-        System.arraycopy(main, 0, result, 0, main.length);
-        System.arraycopy(extraPcm, 0, result, main.length, extraPcm.length);
+        byte[] result = new byte[mainLength + extraLength];
+        System.arraycopy(main, 0, result, 0, mainLength);
+        System.arraycopy(extraPcm, 0, result, mainLength, extraLength);
+
         return result;
     }
 }

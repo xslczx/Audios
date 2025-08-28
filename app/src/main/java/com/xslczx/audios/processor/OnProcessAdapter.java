@@ -2,7 +2,6 @@ package com.xslczx.audios.processor;
 
 import android.util.Log;
 
-import com.xslczx.audios.datas.AudioDecodeInfo;
 import com.xslczx.audios.datas.AudioException;
 
 import org.jetbrains.annotations.NotNull;
@@ -11,11 +10,6 @@ import org.jetbrains.annotations.NotNull;
  * 回调
  */
 public class OnProcessAdapter implements AIGCAudioProcessor.OnProcessListener {
-    @Override
-    public void onStart(@NotNull AudioDecodeInfo info) {
-        onInfo(Log.DEBUG, "音频信息==>" + info);
-    }
-
     @Override
     public void onInfo(int level, @NotNull String extra) {
         Log.println(level, ">>>:AudioProcessor", extra);

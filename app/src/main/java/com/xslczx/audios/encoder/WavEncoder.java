@@ -20,6 +20,11 @@ public class WavEncoder implements Encoder {
     }
 
     @Override
+    public void setProgressListener(ProgressListener listener, long totalBytes) {
+
+    }
+
+    @Override
     public void prepare(int sampleRate, int channelCount, int bitDepth, int bitRate) throws Exception {
         if (isPrepared) return;
 

@@ -32,6 +32,7 @@ public class FlacEncoder implements Encoder {
         this.path = path;
     }
 
+    @Override
     public void setProgressListener(ProgressListener callback,long totalPcmBytes) {
         this.progressCallback = callback;
         this.totalPcmBytes = totalPcmBytes;

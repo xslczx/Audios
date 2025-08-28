@@ -9,15 +9,13 @@ public class LameNative {
         System.loadLibrary("lamejni");
     }
 
-    // 初始化编码器
-    public static native int initEncoder(int numChannels, int sampleRate, int bitRate, int mode, int quality);
+    public static native void init(int inSamplerate, int outChannel, int outSamplerate, int outBitrate, int quality);
 
-    // PCM 编码为 MP3
-    public static native int encode(short[] pcm, int numSamples, byte[] mp3buf);
+    public static native int encodeInterleaved(short[] pcm, int samplesPerChannel, byte[] mp3buf);
 
-    // 冲刷剩余 MP3 数据
+    public static native int encodeMono(short[] pcmLeft, int samples, byte[] mp3buf);
+
     public static native int flush(byte[] mp3buf);
 
-    // 关闭编码器
     public static native void close();
 }

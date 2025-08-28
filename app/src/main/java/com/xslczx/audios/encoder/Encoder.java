@@ -7,6 +7,8 @@ import java.io.IOException;
  */
 public interface Encoder {
 
+    void setProgressListener(ProgressListener listener, long totalBytes);
+
     void prepare(int sampleRate, int channelCount, int bitDepth, int bitRate) throws Exception;
 
     void write(byte[] pcm) throws IOException;

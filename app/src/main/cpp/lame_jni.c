@@ -1,68 +1,84 @@
 #include <jni.h>
 #include <stdlib.h>
+#include <string.h>
 #include "include/lame.h"
+#include "lame_jni.h"
 
-static lame_t gLame = NULL;
+// Global LAME state
+static lame_global_flags *glf = NULL;
 
-JNIEXPORT jint JNICALL
-Java_com_encoder_lame_LameNative_initEncoder(JNIEnv *env, jobject thiz,
-                                             jint numChannels, jint sampleRate,
-                                             jint bitRate, jint mode, jint quality) {
-    if (gLame != NULL) {
-        lame_close(gLame);
-        gLame = NULL;
+JNIEXPORT void JNICALL Java_com_encoder_lame_LameNative_init(
+        JNIEnv *env, jclass cls, jint inSamplerate, jint outChannel,
+        jint outSamplerate, jint outBitrate, jint quality) {
+    if (glf != NULL) {
+        lame_close(glf);
+        glf = NULL;
     }
-    gLame = lame_init();
-    if (!gLame) return -1;
-
-    lame_set_num_channels(gLame, numChannels);
-    lame_set_in_samplerate(gLame, sampleRate);
-    lame_set_brate(gLame, bitRate);
-    lame_set_mode(gLame, mode);
-    lame_set_quality(gLame, quality);
-
-    if (lame_init_params(gLame) < 0) {
-        lame_close(gLame);
-        gLame = NULL;
-        return -2;
-    }
-    return 0;
+    glf = lame_init();
+    lame_set_in_samplerate(glf, inSamplerate);
+    lame_set_num_channels(glf, outChannel);
+    lame_set_out_samplerate(glf, outSamplerate);
+    lame_set_brate(glf, outBitrate);
+    lame_set_quality(glf, quality);
+    lame_init_params(glf);
 }
 
-JNIEXPORT jint JNICALL
-Java_com_encoder_lame_LameNative_encode(JNIEnv *env, jobject thiz,
-                                        jshortArray pcm, jint numSamples,
-                                        jbyteArray mp3buf) {
-    if (!gLame) return -1;
+JNIEXPORT jint JNICALL Java_com_encoder_lame_LameNative_encodeInterleaved(
+        JNIEnv *env, jclass cls, jshortArray pcm, jint samplesPerChannel, jbyteArray mp3buf) {
+    if (glf == NULL) return -1;
 
-    jshort *pcmPtr = (*env)->GetShortArrayElements(env, pcm, NULL);
-    jbyte *mp3Ptr = (*env)->GetByteArrayElements(env, mp3buf, NULL);
+    jshort *j_pcm = (*env)->GetShortArrayElements(env, pcm, NULL);
+    const jsize mp3buf_size = (*env)->GetArrayLength(env, mp3buf);
+    jbyte *j_mp3buf = (*env)->GetByteArrayElements(env, mp3buf, NULL);
 
-    int bytesWritten = lame_encode_buffer_interleaved(
-            gLame, pcmPtr, numSamples, (unsigned char *)mp3Ptr, (*env)->GetArrayLength(env, mp3buf)
-    );
+    int result = lame_encode_buffer_interleaved(glf,
+                                                (short *) j_pcm,
+                                                samplesPerChannel,
+                                                (unsigned char *) j_mp3buf,
+                                                mp3buf_size);
+    (*env)->ReleaseShortArrayElements(env, pcm, j_pcm, 0);
+    (*env)->ReleaseByteArrayElements(env, mp3buf, j_mp3buf, 0);
 
-    (*env)->ReleaseShortArrayElements(env, pcm, pcmPtr, 0);
-    (*env)->ReleaseByteArrayElements(env, mp3buf, mp3Ptr, 0);
-
-    return bytesWritten;
+    return result;
 }
 
-JNIEXPORT jint JNICALL
-Java_com_encoder_lame_LameNative_flush(JNIEnv *env, jobject thiz, jbyteArray mp3buf) {
-    if (!gLame) return -1;
+JNIEXPORT jint JNICALL Java_com_encoder_lame_LameNative_encodeMono(
+        JNIEnv *env, jclass cls, jshortArray pcm, jint samples, jbyteArray mp3buf) {
+    if (glf == NULL) return -1;
 
-    jbyte *mp3Ptr = (*env)->GetByteArrayElements(env, mp3buf, NULL);
-    int bytesFlushed = lame_encode_flush(gLame, (unsigned char *)mp3Ptr, (*env)->GetArrayLength(env, mp3buf));
-    (*env)->ReleaseByteArrayElements(env, mp3buf, mp3Ptr, 0);
+    jshort *j_pcm = (*env)->GetShortArrayElements(env, pcm, NULL);
+    const jsize mp3buf_size = (*env)->GetArrayLength(env, mp3buf);
+    jbyte *j_mp3buf = (*env)->GetByteArrayElements(env, mp3buf, NULL);
 
-    return bytesFlushed;
+    int result = lame_encode_buffer(glf,
+                                    (short *) j_pcm,
+                                    NULL,
+                                    samples,
+                                    (unsigned char *) j_mp3buf,
+                                    mp3buf_size);
+    (*env)->ReleaseShortArrayElements(env, pcm, j_pcm, 0);
+    (*env)->ReleaseByteArrayElements(env, mp3buf, j_mp3buf, 0);
+
+    return result;
 }
 
-JNIEXPORT void JNICALL
-Java_com_encoder_lame_LameNative_close(JNIEnv *env, jobject thiz) {
-    if (gLame) {
-        lame_close(gLame);
-        gLame = NULL;
+JNIEXPORT jint JNICALL Java_com_encoder_lame_LameNative_flush(
+        JNIEnv *env, jclass cls, jbyteArray mp3buf) {
+    if (glf == NULL) return -1;
+
+    const jsize mp3buf_size = (*env)->GetArrayLength(env, mp3buf);
+    jbyte* j_mp3buf = (*env)->GetByteArrayElements(env, mp3buf, NULL);
+
+    int result = lame_encode_flush(glf, (unsigned char*) j_mp3buf, mp3buf_size);
+
+    (*env)->ReleaseByteArrayElements(env, mp3buf, j_mp3buf, 0);
+    return result;
+}
+
+JNIEXPORT void JNICALL Java_com_encoder_lame_LameNative_close(
+        JNIEnv *env, jclass cls) {
+    if (glf != NULL) {
+        lame_close(glf);
+        glf = NULL;
     }
 }

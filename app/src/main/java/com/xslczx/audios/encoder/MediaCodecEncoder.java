@@ -44,6 +44,7 @@ public abstract class MediaCodecEncoder implements Encoder {
         this.profile = profile;
     }
 
+    @Override
     public void setProgressListener(ProgressListener listener, long totalBytes) {
         this.progressListener = listener;
         this.totalBytes = totalBytes;
