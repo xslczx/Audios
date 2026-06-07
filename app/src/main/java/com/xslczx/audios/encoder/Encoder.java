@@ -18,27 +18,21 @@ public interface Encoder {
     void closeQuietly();
 
     default int nearestValue(int[] values, int value) {
-        int distance = Math.abs(values[0] - value);
-        int idx = 0;
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("values must not be empty");
+        }
 
-        for (int c = 1; c < values.length; c++) {
-            int cDistance = Math.abs(values[c] - value);
-            if (cDistance < distance) {
-                idx = c;
-                distance = cDistance;
+        int nearestDistance = Math.abs(values[0] - value);
+        int nearestIndex = 0;
+
+        for (int index = 1; index < values.length; index++) {
+            int candidateDistance = Math.abs(values[index] - value);
+            if (candidateDistance < nearestDistance) {
+                nearestIndex = index;
+                nearestDistance = candidateDistance;
             }
         }
 
-        if (value != values[idx]) {
-            StringBuilder availableValues = new StringBuilder();
-            for (int i = 0; i < values.length; i++) {
-                availableValues.append(values[i]);
-                if (i != values.length - 1) {
-                    availableValues.append(", ");
-                }
-            }
-        }
-
-        return values[idx];
+        return values[nearestIndex];
     }
 }

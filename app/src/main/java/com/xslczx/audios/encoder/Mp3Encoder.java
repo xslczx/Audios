@@ -37,6 +37,7 @@ public class Mp3Encoder implements Encoder {
     @Override
     public void prepare(int sampleRate, int channelCount, int bitDepth, int bitRate) throws Exception {
         if (prepared) return;
+        validatePrepareArguments(sampleRate, channelCount, bitRate);
         this.channelCount = channelCount;
         LameNative.init(sampleRate, channelCount, 441000, bitRate/1000, 7);
         prepared = true;
@@ -129,5 +130,17 @@ public class Mp3Encoder implements Encoder {
 
     private void ensureNotClosed() throws IOException {
         if (closed) throw new IOException("Encoder already closed");
+    }
+
+    private void validatePrepareArguments(int sampleRate, int channelCount, int bitRate) {
+        if (sampleRate <= 0) {
+            throw new IllegalArgumentException("sampleRate must be greater than 0");
+        }
+        if (channelCount <= 0) {
+            throw new IllegalArgumentException("channelCount must be greater than 0");
+        }
+        if (bitRate <= 0) {
+            throw new IllegalArgumentException("bitRate must be greater than 0");
+        }
     }
 }

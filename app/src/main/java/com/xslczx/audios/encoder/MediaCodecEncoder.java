@@ -53,6 +53,8 @@ public abstract class MediaCodecEncoder implements Encoder {
     @Override
     public void prepare(int sampleRate, int channelCount, int bitDepth, int bitRate) throws Exception {
         if (isPrepared) return;
+        validatePrepareArguments(sampleRate, channelCount, bitRate);
+
         this.sampleRate = sampleRate;
         this.channelCount = channelCount;
         this.bitRate = bitRate;
@@ -91,6 +93,9 @@ public abstract class MediaCodecEncoder implements Encoder {
             int inputIndex = codec.dequeueInputBuffer(WAIT_TIMEOUT_US);
             if (inputIndex >= 0) {
                 ByteBuffer inputBuffer = codec.getInputBuffer(inputIndex);
+                if (inputBuffer == null) {
+                    throw new IOException("MediaCodec returned a null input buffer");
+                }
                 inputBuffer.clear();
 
                 int toWrite = Math.min(frameSize, pcm.length - offset);
@@ -119,6 +124,9 @@ public abstract class MediaCodecEncoder implements Encoder {
         int inputIndex = codec.dequeueInputBuffer(WAIT_TIMEOUT_US);
         if (inputIndex >= 0) {
             ByteBuffer inputBuffer = codec.getInputBuffer(inputIndex);
+            if (inputBuffer == null) {
+                throw new IOException("MediaCodec returned a null input buffer");
+            }
             inputBuffer.clear();
             codec.queueInputBuffer(inputIndex, 0, 0, System.nanoTime() / 1000,
                     MediaCodec.BUFFER_FLAG_END_OF_STREAM);
@@ -174,6 +182,10 @@ public abstract class MediaCodecEncoder implements Encoder {
             return true;
         } else if (outputIndex >= 0) {
             ByteBuffer outputBuffer = codec.getOutputBuffer(outputIndex);
+            if (outputBuffer == null) {
+                codec.releaseOutputBuffer(outputIndex, false);
+                return false;
+            }
 
             if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                 bufferInfo.size = 0;
@@ -191,6 +203,17 @@ public abstract class MediaCodecEncoder implements Encoder {
         }
         return false;
     }
-}
 
+    private void validatePrepareArguments(int sampleRate, int channelCount, int bitRate) {
+        if (sampleRate <= 0) {
+            throw new IllegalArgumentException("sampleRate must be greater than 0");
+        }
+        if (channelCount <= 0) {
+            throw new IllegalArgumentException("channelCount must be greater than 0");
+        }
+        if (bitRate <= 0) {
+            throw new IllegalArgumentException("bitRate must be greater than 0");
+        }
+    }
+}
 

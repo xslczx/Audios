@@ -21,6 +21,7 @@ import org.jaudiotagger.tag.wav.WavInfoTag;
 import org.jaudiotagger.tag.wav.WavTag;
 
 import java.io.File;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -51,59 +52,27 @@ public class Tagger {
     /**
      * 更新自定义信息
      */
-    public static void updateCustomInfo(String path, Map<String, String> extraInfo) throws Exception {
+    public static void updateCustomInfo(String filePath, Map<String, String> extraInfo) throws Exception {
+        validateUpdateArguments(filePath, extraInfo);
+
         AudioFile audioFile;
         try {
-            audioFile = AudioFileIO.read(new File(path));
+            audioFile = AudioFileIO.read(new File(filePath));
         } catch (Exception e) {
             throw new AudioException("不支持的音频格式", e);
         }
+
         Tag tag = audioFile.getTagOrCreateDefault();
         for (Map.Entry<String, String> entry : extraInfo.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue();
             if (key == null || value == null) continue;
-            if (FIELD_KEY_MAP.containsKey(key)) {
-                FieldKey fieldKey = FIELD_KEY_MAP.get(key);
+
+            FieldKey fieldKey = FIELD_KEY_MAP.get(key);
+            if (fieldKey != null) {
                 tag.setField(fieldKey, value);
             } else {
-                ID3v22Tag id3v22Tag = new ID3v22Tag();
-                ID3v22Frame id3v22frame = new ID3v22Frame(ID3v22Frames.FRAME_ID_V2_USER_DEFINED_INFO);
-                ((FrameBodyTXXX) id3v22frame.getBody()).setText(value);
-                ((FrameBodyTXXX) id3v22frame.getBody()).setDescription(key);
-                id3v22Tag.setFrame(id3v22frame);
-
-                String ext = audioFile.getExt();
-                if (ext.endsWith("mp3") || audioFile instanceof MP3File) {
-                    MP3File mp3File = ((MP3File) audioFile);
-                    mp3File.setID3v2TagOnly(id3v22Tag);
-                } else if (ext.endsWith("wav") || tag instanceof WavTag) {
-                    WavTag wavTag = (WavTag) tag;
-                    WavInfoTag infoTag = new WavInfoTag();
-                    wavTag.setID3Tag(id3v22Tag);
-                    wavTag.setInfoTag(infoTag);
-                    audioFile.setTag(wavTag);
-                } else if (ext.endsWith("m4a") || tag instanceof Mp4Tag) {
-                    Mp4Tag mp4Tag = (Mp4Tag) tag;
-                    Mp4TagTextField field = new Mp4TagTextField(key, value);
-                    if (mp4Tag.hasField(field.getId())) {
-                        mp4Tag.setField(field);
-                    } else {
-                        mp4Tag.addField(field);
-                    }
-                    audioFile.setTag(mp4Tag);
-                } else if (ext.endsWith("flac") || tag instanceof FlacTag) {
-                    FlacTag flacTag = (FlacTag) tag;
-                    TagField flacTagField = flacTag.createField(key, value);
-                    if (flacTag.hasField(flacTagField.getId())) {
-                        flacTag.setField(flacTagField);
-                    } else {
-                        flacTag.addField(flacTagField);
-                    }
-                    audioFile.setTag(flacTag);
-                } else {
-                    throw new AudioException("不支持的音频格式");
-                }
+                applyCustomField(audioFile, tag, key, value);
             }
         }
         audioFile.commit();
@@ -116,6 +85,74 @@ public class Tagger {
         while (fields.hasNext()) {
             TagField next = fields.next();
             Log.d(TAG, next.getId() + "==>" + next);
+        }
+    }
+
+    private static void applyCustomField(AudioFile audioFile, Tag tag, String key, String value) throws Exception {
+        String extension = audioFile.getExt().toLowerCase(Locale.ROOT);
+        if (extension.endsWith("mp3") || audioFile instanceof MP3File) {
+            MP3File mp3File = (MP3File) audioFile;
+            mp3File.setID3v2TagOnly(createId3CustomTag(key, value));
+            return;
+        }
+
+        if (extension.endsWith("wav") || tag instanceof WavTag) {
+            WavTag wavTag = (WavTag) tag;
+            wavTag.setID3Tag(createId3CustomTag(key, value));
+            wavTag.setInfoTag(new WavInfoTag());
+            audioFile.setTag(wavTag);
+            return;
+        }
+
+        if (extension.endsWith("m4a") || tag instanceof Mp4Tag) {
+            applyMp4CustomField(audioFile, (Mp4Tag) tag, key, value);
+            return;
+        }
+
+        if (extension.endsWith("flac") || tag instanceof FlacTag) {
+            applyFlacCustomField(audioFile, (FlacTag) tag, key, value);
+            return;
+        }
+
+        throw new AudioException("不支持的音频格式");
+    }
+
+    private static ID3v22Tag createId3CustomTag(String key, String value) throws Exception {
+        ID3v22Tag customTag = new ID3v22Tag();
+        ID3v22Frame customFrame = new ID3v22Frame(ID3v22Frames.FRAME_ID_V2_USER_DEFINED_INFO);
+        FrameBodyTXXX frameBody = (FrameBodyTXXX) customFrame.getBody();
+        frameBody.setText(value);
+        frameBody.setDescription(key);
+        customTag.setFrame(customFrame);
+        return customTag;
+    }
+
+    private static void applyMp4CustomField(AudioFile audioFile, Mp4Tag mp4Tag, String key, String value) throws Exception {
+        Mp4TagTextField customField = new Mp4TagTextField(key, value);
+        if (mp4Tag.hasField(customField.getId())) {
+            mp4Tag.setField(customField);
+        } else {
+            mp4Tag.addField(customField);
+        }
+        audioFile.setTag(mp4Tag);
+    }
+
+    private static void applyFlacCustomField(AudioFile audioFile, FlacTag flacTag, String key, String value) throws Exception {
+        TagField customField = flacTag.createField(key, value);
+        if (flacTag.hasField(customField.getId())) {
+            flacTag.setField(customField);
+        } else {
+            flacTag.addField(customField);
+        }
+        audioFile.setTag(flacTag);
+    }
+
+    private static void validateUpdateArguments(String filePath, Map<String, String> extraInfo) {
+        if (filePath == null || filePath.trim().isEmpty()) {
+            throw new IllegalArgumentException("filePath must not be blank");
+        }
+        if (extraInfo == null || extraInfo.isEmpty()) {
+            throw new IllegalArgumentException("extraInfo must not be empty");
         }
     }
 }

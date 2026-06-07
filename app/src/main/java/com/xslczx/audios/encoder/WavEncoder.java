@@ -27,6 +27,7 @@ public class WavEncoder implements Encoder {
     @Override
     public void prepare(int sampleRate, int channelCount, int bitDepth, int bitRate) throws Exception {
         if (isPrepared) return;
+        validatePrepareArguments(sampleRate, channelCount, bitDepth);
 
         this.sampleRate = sampleRate;
         this.channelCount = channelCount;
@@ -128,5 +129,16 @@ public class WavEncoder implements Encoder {
                 (byte) ((value >> 8) & 0xff)
         };
     }
-}
 
+    private void validatePrepareArguments(int sampleRate, int channelCount, int bitDepth) {
+        if (sampleRate <= 0) {
+            throw new IllegalArgumentException("sampleRate must be greater than 0");
+        }
+        if (channelCount <= 0) {
+            throw new IllegalArgumentException("channelCount must be greater than 0");
+        }
+        if (bitDepth <= 0) {
+            throw new IllegalArgumentException("bitDepth must be greater than 0");
+        }
+    }
+}

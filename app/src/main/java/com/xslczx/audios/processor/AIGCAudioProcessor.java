@@ -18,20 +18,23 @@ import com.xslczx.audios.tag.Tagger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AIGCAudioProcessor {
+    private static final int PCM_ENCODING_BIT_DEPTH = 16;
+    private static final int DEFAULT_OUTPUT_BIT_RATE = 128_000;
+    private static final int GENERATED_SAMPLE_RATE = 16000;
+    private static final int GENERATED_CHANNEL_COUNT = 2;
+    private static final int GENERATED_BIT_RATE = 32_000;
+    private static final int GENERATED_WPM = 13;
+    private static final double GENERATED_VOLUME = 1.0;
+    private static final String AI_MARKER = "AI";
 
     private final Config config;
-    private final AtomicBoolean isStopped = new AtomicBoolean(false);
-    private Encoder encoder;
-    private static final int PCM_ENCODING_BIT_DEPTH = 16;
-    private static final long PCM_DEQUEUE_TIMEOUT_US = 10000;
-    private static final long MIN_PROGRESS_INTERVAL_MS = 100;
-    private float lastProgress = 0f;
-    private long lastProgressTime = 0;
+    private final AtomicBoolean stopped = new AtomicBoolean(false);
+    private final Handler mainThreadHandler = new Handler(Looper.getMainLooper());
     private final OnProcessListener onProcessListener;
+    private Encoder encoder;
 
     public AIGCAudioProcessor(@NotNull Config config, @Nullable OnProcessListener onProcessListener) {
         this.config = config;
@@ -39,8 +42,7 @@ public class AIGCAudioProcessor {
         try {
             encoder = EncoderFactory.createEncoder(config);
         } catch (Exception e) {
-            AudioException audioException = new AudioException("初始化失败,无法创建编码器", e);
-            callbackOnError(audioException);
+            callbackOnError(new AudioException("初始化失败,无法创建编码器", e));
             stop();
         }
     }
@@ -50,46 +52,28 @@ public class AIGCAudioProcessor {
      */
     @NotNull
     public AIGCAudioProcessor startAsync() {
-        if (isStopped.get()) return this;
+        if (stopped.get()) return this;
+        if (config.audioPaths.isEmpty()) {
+            callbackOnError(new AudioException("音频处理失败", new IllegalArgumentException("audioPaths must not be empty")));
+            stop();
+            return this;
+        }
+
         AudioDecodeTaskManager.cancelAllTasks();
-        AudioDecodeTaskManager.startDecodeTask(Collections.singletonList(config.inputPath), new AudioDecoderConcatenator.DecodeCallback() {
+        AudioDecodeTaskManager.startDecodeTask(config.audioPaths, new AudioDecoderConcatenator.DecodeCallback() {
             @Override
             public void onProgress(float progress, long currentTimeUs) {
-                callbackOnProgress(0, calculateFraction(), progress);
+                callbackOnProgress(0f, calculateProgressSplit(), progress);
             }
 
             @Override
             public void onSuccess(byte[] pcmData, int sampleRate, int channels) {
                 try {
-                    int bitRate = config.bitRate > 0 ? config.bitRate : 128_000;
-                    config.effectProcessor.prepare(
-                            sampleRate,
-                            channels,
-                            PCM_ENCODING_BIT_DEPTH,
-                            bitRate
-                    );
-                    config.effectProcessor.write(pcmData);
-
-                    byte[] finalPcm = config.effectProcessor.flush();
-
-                    encoder.setProgressListener((writtenBytes, totalBytes) -> {
-                        if (isStopped.get()) return;
-                        callbackOnProgress(calculateFraction(), 1f, writtenBytes * 1f / totalBytes);
-                    }, finalPcm.length);
-                    encoder.prepare(sampleRate,channels,16,bitRate);
-                    encoder.write(finalPcm);
-                    encoder.flush();
-
-                    callbackOnProgress(1f, 1f, 1f);
-
-                    callbackOnInfo(Log.DEBUG, "更新音频信息==>" + config.extraInfo);
-                    Tagger.updateCustomInfo(config.outputPath, config.extraInfo);
-                    callbackOnInfo(Log.DEBUG, "音频处理完成==>" + config.outputPath);
-                    callbackOnComplete();
+                    processDecodedAudio(pcmData, sampleRate, channels);
                 } catch (Exception e) {
                     callbackOnError(new AudioException("音频处理失败", e));
                 } finally {
-                    encoder.closeQuietly();
+                    closeEncoderQuietly();
                 }
             }
 
@@ -103,7 +87,7 @@ public class AIGCAudioProcessor {
 
     @NotNull
     public AIGCAudioProcessor generateAIAsync() {
-        if (isStopped.get()) return this;
+        if (stopped.get()) return this;
         new Thread(this::generateAI, "AIGeneratorThread").start();
         return this;
     }
@@ -112,59 +96,128 @@ public class AIGCAudioProcessor {
      * 停止解码
      */
     public void stop() {
-        isStopped.set(true);
+        stopped.set(true);
     }
 
-    private float calculateFraction() {
-        if (encoder instanceof MediaCodecEncoder) return 0.5f;
-        if (encoder instanceof FlacEncoder) return 0.5f;
-        return 1f;
+    private float calculateProgressSplit() {
+        return requiresMultiPhaseProgress() ? 0.5f : 1f;
+    }
+
+    private void processDecodedAudio(byte[] pcmData, int sampleRate, int channels) throws Exception {
+        Encoder activeEncoder = requireEncoder();
+        int outputBitRate = resolveOutputBitRate();
+
+        config.effectProcessor.prepare(sampleRate, channels, PCM_ENCODING_BIT_DEPTH, outputBitRate);
+        config.effectProcessor.write(pcmData);
+        byte[] processedPcm = config.effectProcessor.flush();
+
+        activeEncoder.setProgressListener((writtenBytes, totalBytes) -> {
+            if (stopped.get()) return;
+            callbackOnProgress(calculateProgressSplit(), 1f, toSafeProgress(writtenBytes, totalBytes));
+        }, processedPcm.length);
+        activeEncoder.prepare(sampleRate, channels, PCM_ENCODING_BIT_DEPTH, outputBitRate);
+        activeEncoder.write(processedPcm);
+        activeEncoder.flush();
+
+        callbackOnProgress(1f, 1f, 1f);
+        updateAudioMetadata();
+        callbackOnInfo(Log.DEBUG, "音频处理完成==>" + config.outputPath);
+        callbackOnComplete();
+    }
+
+    private void updateAudioMetadata() throws Exception {
+        callbackOnInfo(Log.DEBUG, "更新音频信息==>" + config.extraInfo);
+        Tagger.updateCustomInfo(config.outputPath, config.extraInfo);
     }
 
     private void generateAI() {
-        MorseAudio morseAudio = new MorseAudio();
-        byte[] sound = morseAudio.morseWord2Sound("AI", 800, 13, 16000, 1.0, 2);
         try {
-            encoder.prepare(16000, 2, 16, 32_000);
-            encoder.write(sound);
-            encoder.flush();
+            Encoder activeEncoder = requireEncoder();
+            byte[] generatedSound = new MorseAudio().morseWord2Sound(
+                    AI_MARKER,
+                    Config.FREQUENCY_NORMAL,
+                    GENERATED_WPM,
+                    GENERATED_SAMPLE_RATE,
+                    GENERATED_VOLUME,
+                    GENERATED_CHANNEL_COUNT
+            );
+            activeEncoder.prepare(
+                    GENERATED_SAMPLE_RATE,
+                    GENERATED_CHANNEL_COUNT,
+                    PCM_ENCODING_BIT_DEPTH,
+                    GENERATED_BIT_RATE
+            );
+            activeEncoder.write(generatedSound);
+            activeEncoder.flush();
             callbackOnComplete();
         } catch (Exception e) {
             callbackOnError(new AudioException("音频处理失败", e));
         } finally {
+            closeEncoderQuietly();
+        }
+    }
+
+    private Encoder requireEncoder() throws AudioException {
+        if (encoder == null) {
+            throw new AudioException("初始化失败,无法创建编码器");
+        }
+        return encoder;
+    }
+
+    private void closeEncoderQuietly() {
+        if (encoder != null) {
             encoder.closeQuietly();
         }
     }
 
-    private final Handler handler = new Handler(Looper.getMainLooper());
+    private int resolveOutputBitRate() {
+        return config.bitRate > 0 ? config.bitRate : DEFAULT_OUTPUT_BIT_RATE;
+    }
+
+    private boolean requiresMultiPhaseProgress() {
+        return encoder instanceof MediaCodecEncoder || encoder instanceof FlacEncoder;
+    }
+
+    private float toSafeProgress(long writtenBytes, long totalBytes) {
+        if (totalBytes <= 0) {
+            return 0f;
+        }
+        return writtenBytes * 1f / totalBytes;
+    }
 
     private void callbackOnInfo(int level, String extra) {
-        if (isStopped.get()) return;
+        if (stopped.get()) return;
         if (onProcessListener != null) {
             onProcessListener.onInfo(level, extra);
         }
     }
 
     private void callbackOnProgress(float start, float end, float progress) {
-        float v = start + progress * (end - start);
-        callbackOnInfo(Log.VERBOSE, "进度==>" + v);
-        handler.post(() -> {
-            if (isStopped.get()) return;
-            if (onProcessListener != null) onProcessListener.onProgress(v);
+        float normalizedProgress = start + progress * (end - start);
+        callbackOnInfo(Log.VERBOSE, "进度==>" + normalizedProgress);
+        mainThreadHandler.post(() -> {
+            if (stopped.get()) return;
+            if (onProcessListener != null) {
+                onProcessListener.onProgress(normalizedProgress);
+            }
         });
     }
 
     private void callbackOnComplete() {
-        handler.post(() -> {
-            if (isStopped.get()) return;
-            if (onProcessListener != null) onProcessListener.onComplete(config.outputPath);
+        mainThreadHandler.post(() -> {
+            if (stopped.get()) return;
+            if (onProcessListener != null) {
+                onProcessListener.onComplete(config.outputPath);
+            }
         });
     }
 
     private void callbackOnError(AudioException e) {
-        handler.post(() -> {
-            if (isStopped.get()) return;
-            if (onProcessListener != null) onProcessListener.onError(e);
+        mainThreadHandler.post(() -> {
+            if (stopped.get()) return;
+            if (onProcessListener != null) {
+                onProcessListener.onError(e);
+            }
         });
     }
 

@@ -19,12 +19,6 @@ JNIEXPORT jint JNICALL Java_com_encoder_lame_LameNative_encodeInterleaved
 JNIEXPORT jint JNICALL Java_com_encoder_lame_LameNative_encodeMono
         (JNIEnv *, jclass, jshortArray, jint, jbyteArray);
 
-// 直接传 byte[] PCM（little-endian 16-bit），不用在 Java 里转 short[]
-// pcmBytes 包含 interleaved 或 单声道数据（由 samplesPerChannel 决定）
-// samplesPerChannel 表示每声道的 short 数
-JNIEXPORT jint JNICALL Java_com_encoder_lame_LameNative_encodeBytes
-        (JNIEnv *, jclass, jbyteArray, jint, jbyteArray);
-
 // flush / close
 JNIEXPORT jint JNICALL Java_com_encoder_lame_LameNative_flush
         (JNIEnv *, jclass, jbyteArray);
